@@ -1,0 +1,374 @@
+[1mdiff --git a/bindings/java/src/main/native/endpoint.cc b/bindings/java/src/main/native/endpoint.cc[m
+[1mindex eb26802..e4b4ff5 100644[m
+[1m--- a/bindings/java/src/main/native/endpoint.cc[m
+[1m+++ b/bindings/java/src/main/native/endpoint.cc[m
+[36m@@ -97,7 +97,7 @@[m [mJava_org_openucx_jucx_ucp_UcpEndpoint_createEndpointNative(JNIEnv *env, jobject[m
+         name = (jstring)env->GetObjectField(ucp_ep_params, field);[m
+         ep_params.name = env->GetStringUTFChars(name, 0);;[m
+     }[m
+[31m-[m
+[32m+[m[41m    [m
+     ucs_status_t status = ucp_ep_create(ucp_worker, &ep_params, &endpoint);[m
+     if (name != NULL) {[m
+         env->ReleaseStringChars(name, (const jchar*)ep_params.name);[m
+[1mdiff --git a/src/tools/info/proto_info.c b/src/tools/info/proto_info.c[m
+[1mindex 8d65335..ccd5a92 100644[m
+[1m--- a/src/tools/info/proto_info.c[m
+[1m+++ b/src/tools/info/proto_info.c[m
+[36m@@ -395,7 +395,7 @@[m [mprint_ucp_info(int print_opts, ucs_config_print_flags_t print_flags,[m
+     worker_params.thread_mode = UCS_THREAD_MODE_MULTI;[m
+ [m
+     get_resource_usage(&usage);[m
+[31m-[m
+[32m+[m[41m    [m
+     status = ucp_worker_create(context, &worker_params, &worker);[m
+     if (status != UCS_OK) {[m
+         printf("<Failed to create UCP worker>\n");[m
+[1mdiff --git a/src/tools/perf/lib/libperf.c b/src/tools/perf/lib/libperf.c[m
+[1mindex 1d47cbf..b4e6f90 100644[m
+[1m--- a/src/tools/perf/lib/libperf.c[m
+[1m+++ b/src/tools/perf/lib/libperf.c[m
+[36m@@ -1658,7 +1658,6 @@[m [mstatic ucs_status_t ucp_perf_setup(ucx_perf_context_t *perf)[m
+                         UCS_PTR_BYTE_OFFSET(perf->send_buffer, i * message_size);[m
+         perf->ucp.tctx[i].perf.recv_buffer =[m
+                         UCS_PTR_BYTE_OFFSET(perf->recv_buffer, i * message_size);[m
+[31m-[m
+         status = ucp_worker_create(perf->ucp.context, &worker_params,[m
+                                    &perf->ucp.tctx[i].perf.ucp.worker);[m
+         if (status != UCS_OK) {[m
+[1mdiff --git a/src/ucp/core/ucp_ep.c b/src/ucp/core/ucp_ep.c[m
+[1mindex 1c0f16c..97dc020 100644[m
+[1m--- a/src/ucp/core/ucp_ep.c[m
+[1m+++ b/src/ucp/core/ucp_ep.c[m
+[36m@@ -37,6 +37,7 @@[m
+ #include <ucs/sys/sock.h>[m
+ #include <ucs/vfs/base/vfs_obj.h>[m
+ #include <string.h>[m
+[32m+[m[32m#include <ucs/config/parser.h>[m
+ [m
+ __KHASH_IMPL(ucp_ep_peer_mem_hash, kh_inline, uint64_t,[m
+              ucp_ep_peer_mem_data_t, 1,[m
+[36m@@ -1080,7 +1081,7 @@[m [mucp_ep_create_api_to_worker_addr(ucp_worker_h worker,[m
+         ucp_stream_ep_activate(ep);[m
+         goto out_resolve_remote_id;[m
+     }[m
+[31m-[m
+[32m+[m[32m    // printf("call ucp_ep_create_to_worker_addr [ucp_ep_create_api_to_worker_addr]\n");[m
+     status = ucp_ep_create_to_worker_addr(worker, &ucp_tl_bitmap_max,[m
+                                           &remote_address, ep_init_flags,[m
+                                           "from api call", addr_indices, &ep);[m
+[36m@@ -1181,12 +1182,14 @@[m [mucs_status_t ucp_ep_create(ucp_worker_h worker, const ucp_ep_params_t *params,[m
+     ucs_status_t status;[m
+ [m
+     UCS_ASYNC_BLOCK(&worker->async);[m
+[31m-[m
+[32m+[m[32m    // printf("start to create ep...\n");[m
+     if (flags & UCP_EP_PARAMS_FLAGS_CLIENT_SERVER) {[m
+[32m+[m[32m        // printf("call ucp_ep_create_to_sock_addr [ucp_ep_create]\n");[m
+         status = ucp_ep_create_to_sock_addr(worker, params, &ep);[m
+     } else if (params->field_mask & UCP_EP_PARAM_FIELD_CONN_REQUEST) {[m
+         status = ucp_ep_create_api_conn_request(worker, params, &ep);[m
+     } else if (params->field_mask & UCP_EP_PARAM_FIELD_REMOTE_ADDRESS) {[m
+[32m+[m[32m        // printf("call ucp_ep_create_api_to_worker_addr [ucp_ep_create]\n");[m
+         status = ucp_ep_create_api_to_worker_addr(worker, params, &ep);[m
+     } else {[m
+         status = UCS_ERR_INVALID_PARAM;[m
+[1mdiff --git a/src/ucp/core/ucp_worker.c b/src/ucp/core/ucp_worker.c[m
+[1mindex 5adcee9..76b062d 100644[m
+[1m--- a/src/ucp/core/ucp_worker.c[m
+[1m+++ b/src/ucp/core/ucp_worker.c[m
+[36m@@ -1674,7 +1674,7 @@[m [mstatic void ucp_worker_init_device_atomics(ucp_worker_h worker)[m
+         ucs_debug("worker %p: no support for atomics", worker);[m
+         return;[m
+     }[m
+[31m-[m
+[32m+[m[32m    printf("rsc-index %d\n", rsc_index);[m
+     ucs_debug("worker %p: using device atomics", worker);[m
+ [m
+     /* Enable atomics on all resources using same device as the "best" resource */[m
+[36m@@ -1684,7 +1684,7 @@[m [mstatic void ucp_worker_init_device_atomics(ucp_worker_h worker)[m
+             (rsc->md_index == best_rsc->md_index) &&[m
+             !strncmp(rsc->tl_rsc.dev_name, best_rsc->tl_rsc.dev_name,[m
+                      UCT_DEVICE_NAME_MAX)) {[m
+[31m-            ucp_worker_enable_atomic_tl(worker, "device", rsc_index);[m
+[32m+[m[32m            ucp_worker_enable_atomic_tl(worker, "device", rsc_index);[m[41m [m
+         }[m
+     }[m
+ }[m
+[36m@@ -1713,7 +1713,6 @@[m [mstatic void ucp_worker_init_atomic_tls(ucp_worker_h worker)[m
+     ucp_context_h context = worker->context;[m
+ [m
+     UCS_BITMAP_CLEAR(&worker->atomic_tls);[m
+[31m-[m
+     if (context->config.features & UCP_FEATURE_AMO) {[m
+         switch(context->config.ext.atomic_mode) {[m
+         case UCP_ATOMIC_MODE_CPU:[m
+[36m@@ -1777,8 +1776,10 @@[m [mucp_worker_print_used_tls(ucp_worker_h worker, ucp_worker_cfg_index_t cfg_index)[m
+     int amo_emul                    = 0;[m
+     int num_valid_lanes             = 0;[m
+     ucp_lane_index_t lane;[m
+[31m-[m
+[32m+[m[32m    char *TLS_info                  = NULL;[m
+[32m+[m[41m    [m
+     ucp_ep_config_name(worker, cfg_index, &strb);[m
+[32m+[m[32m    // 0x55c43bea5cb0 self cfg#0[m
+ [m
+     for (lane = 0; lane < key->num_lanes; ++lane) {[m
+         if (key->lanes[lane].rsc_index == UCP_NULL_RESOURCE) {[m
+[36m@@ -1853,6 +1854,11 @@[m [mucp_worker_print_used_tls(ucp_worker_h worker, ucp_worker_cfg_index_t cfg_index)[m
+     ucs_string_buffer_rtrim(&strb, "; ");[m
+ [m
+     ucs_info("%s", ucs_string_buffer_cstr(&strb));[m
+[32m+[m[32m    /*HW4: print line 1 */[m
+[32m+[m[32m    TLS_info = ucs_config_parser_print_TLS("UCX_TLS", TLS_info);[m
+[32m+[m[32m    ucp_config_print(NULL, stdout, TLS_info, UCS_CONFIG_PRINT_TLS);[m
+[32m+[m[32m    /*HW4: print line 2 */[m
+[32m+[m[32m    ucp_config_print(NULL, stdout, ucs_string_buffer_cstr(&strb), UCS_CONFIG_PRINT_TLS);[m
+ }[m
+ [m
+ static ucs_status_t ucp_worker_init_mpools(ucp_worker_h worker)[m
+[36m@@ -2239,6 +2245,7 @@[m [mstatic void ucp_warn_unused_uct_config(ucp_context_h context)[m
+ [m
+     ucs_string_buffer_init(&unused_cached_uct_cfg);[m
+ [m
+[32m+[m[41m    [m
+     ucs_list_for_each(key_val, &context->cached_key_list, list) {[m
+         if (!key_val->used) {[m
+             ucs_string_buffer_appendf(&unused_cached_uct_cfg, "%s=%s,",[m
+[36m@@ -2321,7 +2328,6 @@[m [mucs_status_t ucp_worker_create(ucp_context_h context,[m
+     if (worker == NULL) {[m
+         return UCS_ERR_NO_MEMORY;[m
+     }[m
+[31m-[m
+     worker->context              = context;[m
+     worker->uuid                 = ucs_generate_uuid((uintptr_t)worker);[m
+     worker->flush_ops_count      = 0;[m
+[36m@@ -2497,11 +2503,12 @@[m [mucs_status_t ucp_worker_create(ucp_context_h context,[m
+ [m
+     /* Select atomic resources */[m
+     ucp_worker_init_atomic_tls(worker);[m
+[31m-[m
+     /* At this point all UCT memory domains and interfaces are already created[m
+      * so print used environment variables and warn about unused ones.[m
+      */[m
+[32m+[m[32m    // ucs_config_parser_print_TLS("UCX_TLS");[m
+     ucs_config_parser_print_env_vars_once(context->config.env_prefix);[m
+[32m+[m[32m    // ucs_config_parser_print_UCX_TLS(context->config.env_prefix);[m
+ [m
+     /* Warn unused cached uct configuration */[m
+     ucp_warn_unused_uct_config(context);[m
+[1mdiff --git a/src/ucp/wireup/select.c b/src/ucp/wireup/select.c[m
+[1mindex a661f49..b452124 100644[m
+[1m--- a/src/ucp/wireup/select.c[m
+[1m+++ b/src/ucp/wireup/select.c[m
+[36m@@ -2036,31 +2036,31 @@[m [mucp_wireup_search_lanes(const ucp_wireup_select_params_t *select_params,[m
+     ucs_status_t status;[m
+ [m
+     ucp_wireup_select_context_init(select_ctx);[m
+[31m-[m
+[32m+[m[32m    // printf("ucp_wireup_search_lanes: cm\n");[m
+     status = ucp_wireup_add_cm_lane(select_params, select_ctx);[m
+     if (status != UCS_OK) {[m
+         return status;[m
+     }[m
+[31m-[m
+[32m+[m[32m    // printf("ucp_wireup_search_lanes: rma\n");[m
+     /* Add fast protocols first (so they'll fit in the cached-in part of[m
+      * ucp_ep. Fast protocols are: RMA/AM/AMO/TAG */[m
+     status = ucp_wireup_add_rma_lanes(select_params, select_ctx);[m
+     if (status != UCS_OK) {[m
+         return status;[m
+     }[m
+[31m-[m
+[32m+[m[32m    // printf("ucp_wireup_search_lanes: amo\n");[m
+     status = ucp_wireup_add_amo_lanes(select_params, select_ctx);[m
+     if (status != UCS_OK) {[m
+         return status;[m
+     }[m
+[31m-[m
+[32m+[m[32m    // printf("ucp_wireup_search_lanes: am\n");[m[41m   [m
+     /* Add AM lane only after RMA/AMO was selected to be aware[m
+      * about whether they need emulation over AM or not */[m
+     status = ucp_wireup_add_am_lane(select_params, &am_info, select_ctx);[m
+     if (status != UCS_OK) {[m
+         return status;[m
+     }[m
+[31m-[m
+[32m+[m[32m    // printf("ucp_wireup_search_lanes: tag\n");[m[41m [m
+     status = ucp_wireup_add_tag_lane(select_params, &am_info, err_mode,[m
+                                      select_ctx);[m
+     if (status != UCS_OK) {[m
+[1mdiff --git a/src/ucp/wireup/wireup.c b/src/ucp/wireup/wireup.c[m
+[1mindex dfd6330..d2004be 100644[m
+[1m--- a/src/ucp/wireup/wireup.c[m
+[1m+++ b/src/ucp/wireup/wireup.c[m
+[36m@@ -844,6 +844,7 @@[m [mucp_wireup_send_ep_removed(ucp_worker_h worker, const ucp_wireup_msg_t *msg,[m
+     }[m
+ [m
+     /* Initialize lanes of the reply EP */[m
+[32m+[m[32m    // printf("ucp_wireup_process_request here!\n");[m
+     status = ucp_wireup_init_lanes(reply_ep, ep_init_flags, &ucp_tl_bitmap_max,[m
+                                    remote_address, addr_indices);[m
+     if (status != UCS_OK) {[m
+[36m@@ -1520,7 +1521,7 @@[m [mucs_status_t ucp_wireup_init_lanes(ucp_ep_h ep, unsigned ep_init_flags,[m
+         }[m
+         UCS_BITMAP_AND_INPLACE(&tl_bitmap, current_tl_bitmap);[m
+     }[m
+[31m-[m
+[32m+[m[32m    // printf("call ucp_wireup_select_lanes [ucp_wireup_init_lanes]\n");[m
+     status = ucp_wireup_select_lanes(ep, ep_init_flags, tl_bitmap,[m
+                                      remote_address, addr_indices, &key, 1);[m
+     if (status != UCS_OK) {[m
+[36m@@ -1538,6 +1539,7 @@[m [mucs_status_t ucp_wireup_init_lanes(ucp_ep_h ep, unsigned ep_init_flags,[m
+     ucp_wireup_get_reachable_mds(ep, ep_init_flags, remote_address, &key);[m
+ [m
+     /* Load new configuration */[m
+[32m+[m[32m    // printf("call ucp_worker_get_ep_config()->ucp_worker_print_used_tls() [ucp_wireup_init_lanes]\n");[m
+     status = ucp_worker_get_ep_config(worker, &key, ep_init_flags,[m
+                                       &new_cfg_index);[m
+     if (status != UCS_OK) {[m
+[1mdiff --git a/src/ucs/config/parser.c b/src/ucs/config/parser.c[m
+[1mindex 82bc04b..bc07ccb 100644[m
+[1m--- a/src/ucs/config/parser.c[m
+[1m+++ b/src/ucs/config/parser.c[m
+[36m@@ -1878,8 +1878,8 @@[m [mvoid ucs_config_parser_print_opts(FILE *stream, const char *title, const void *o[m
+     }[m
+ [m
+     // TODO: PP-HW4[m
+[31m-    if (flags /*& UCS_CONFIG_PRINT_TLS*/) {[m
+[31m-[m
+[32m+[m[32m    if (flags & UCS_CONFIG_PRINT_TLS) {[m[41m [m
+[32m+[m[32m        fprintf(stream, "%s \n", title);[m
+     }[m
+ [m
+     if (flags & UCS_CONFIG_PRINT_HEADER) {[m
+[36m@@ -2004,7 +2004,6 @@[m [mstatic void ucs_config_parser_print_env_vars(const char *prefix)[m
+     ucs_string_buffer_init(&used_vars_strb);[m
+ [m
+     pthread_mutex_lock(&ucs_config_parser_env_vars_hash_lock);[m
+[31m-[m
+     for (envp = environ; *envp != NULL; ++envp) {[m
+         envstr = ucs_strdup(*envp, "env_str");[m
+         if (envstr == NULL) {[m
+[36m@@ -2044,18 +2043,55 @@[m [mstatic void ucs_config_parser_print_env_vars(const char *prefix)[m
+                  ucs_string_buffer_cstr(&unused_vars_strb),[m
+                  UCS_DEFAULT_ENV_PREFIX, UCS_GLOBAL_OPTS_WARN_UNUSED_CONFIG);[m
+     }[m
+[31m-[m
+     if (num_used_vars > 0) {[m
+         ucs_string_buffer_rtrim(&used_vars_strb, " ");[m
+         ucs_info("%s* env variable%s: %s", prefix,[m
+                  (num_used_vars > 1) ? "s" : "",[m
+                  ucs_string_buffer_cstr(&used_vars_strb));[m
+     }[m
+[31m-[m
+     ucs_string_buffer_cleanup(&unused_vars_strb);[m
+     ucs_string_buffer_cleanup(&used_vars_strb);[m
+ }[m
+ [m
+[32m+[m[32m/**[m
+[32m+[m[32m    HW4: print TLS function[m
+[32m+[m[32m*/[m
+[32m+[m[32mchar* ucs_config_parser_print_TLS(const char *prefix, char *str)[m
+[32m+[m[32m{[m
+[32m+[m[32m    char **envp, *envstr;[m
+[32m+[m[32m    size_t prefix_len;[m
+[32m+[m[32m    char *var_name;[m
+[32m+[m[32m    char *saveptr;[m
+[32m+[m[32m    char *TLS_info = NULL;[m
+[32m+[m[32m    prefix_len      = strlen(prefix);[m
+[32m+[m[41m    [m
+[32m+[m[32m    pthread_mutex_lock(&ucs_config_parser_env_vars_hash_lock);[m
+[32m+[m[32m    for (envp = environ; *envp != NULL; ++envp) {[m
+[32m+[m[32m        envstr = ucs_strdup(*envp, "env_str");[m
+[32m+[m[32m        if (envstr == NULL) {[m
+[32m+[m[32m            continue;[m
+[32m+[m[32m        }[m
+[32m+[m[32m        var_name = strtok_r(envstr, "=", &saveptr);[m
+[32m+[m[32m        if (!var_name || strncmp(var_name, prefix, prefix_len)) {[m
+[32m+[m[32m            ucs_free(envstr);[m
+[32m+[m[32m            continue; /* Not UCX */[m
+[32m+[m[32m        }[m
+[32m+[m[32m        else{[m
+[32m+[m[32m            // allocate memory for the output stream[m
+[32m+[m[32m            TLS_info = malloc(strlen(envstr)+strlen(saveptr)+5);[m
+[32m+[m[32m            strcpy(TLS_info, envstr);[m
+[32m+[m[32m            strcat(TLS_info, "=");[m
+[32m+[m[32m            strcat(TLS_info, saveptr);[m
+[32m+[m[32m            // printf("%s=%s\n", envstr, saveptr);[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m[41m    [m
+[32m+[m[32m    pthread_mutex_unlock(&ucs_config_parser_env_vars_hash_lock);[m
+[32m+[m[32m    return TLS_info;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m
+[32m+[m
+ void ucs_config_parser_print_env_vars_once(const char *env_prefix)[m
+ {[m
+     const char   *sub_prefix = NULL;[m
+[36m@@ -2065,13 +2101,14 @@[m [mvoid ucs_config_parser_print_env_vars_once(const char *env_prefix)[m
+     /* Although env_prefix is not real environment variable put it[m
+      * into table anyway to save prefixes which was already checked.[m
+      * Need to save both env_prefix and base_prefix */[m
+[32m+[m
+     ucs_config_parser_mark_env_var_used(env_prefix, &added);[m
+     if (!added) {[m
+         return;[m
+[32m+[m[32m        // 會在這裡就 return 掉！[m
+     }[m
+ [m
+     ucs_config_parser_print_env_vars(env_prefix);[m
+[31m-[m
+     status = ucs_config_parser_get_sub_prefix(env_prefix, &sub_prefix);[m
+     if (status != UCS_OK) {[m
+         return;[m
+[36m@@ -2128,3 +2165,4 @@[m [mUCS_STATIC_CLEANUP {[m
+     })[m
+     kh_destroy_inplace(ucs_config_map, &ucs_config_file_vars);[m
+ }[m
+[41m+[m
+[1mdiff --git a/src/ucs/config/parser.h b/src/ucs/config/parser.h[m
+[1mindex fe044d8..3ed1073 100644[m
+[1m--- a/src/ucs/config/parser.h[m
+[1m+++ b/src/ucs/config/parser.h[m
+[36m@@ -537,6 +537,11 @@[m [mucs_status_t ucs_config_parser_set_value(void *opts, ucs_config_field_t *fields,[m
+ [m
+ void ucs_config_parser_print_env_vars_once(const char *env_prefix);[m
+ [m
+[32m+[m[32m/**[m
+[32m+[m[32m    HW4: print TLS function[m
+[32m+[m[32m*/[m
+[32m+[m[32mchar *ucs_config_parser_print_TLS(const char *prefix, char* str);[m
+[32m+[m
+ /**[m
+  * Translate configuration value of "MEMUNITS" type to actual value.[m
+  *[m
+[1mdiff --git a/src/ucs/config/types.h b/src/ucs/config/types.h[m
+[1mindex c300a6b..8206a34 100644[m
+[1m--- a/src/ucs/config/types.h[m
+[1m+++ b/src/ucs/config/types.h[m
+[36m@@ -90,7 +90,8 @@[m [mtypedef enum {[m
+     UCS_CONFIG_PRINT_HEADER          = UCS_BIT(1),[m
+     UCS_CONFIG_PRINT_DOC             = UCS_BIT(2),[m
+     UCS_CONFIG_PRINT_HIDDEN          = UCS_BIT(3),[m
+[31m-    UCS_CONFIG_PRINT_COMMENT_DEFAULT = UCS_BIT(4)[m
+[32m+[m[32m    UCS_CONFIG_PRINT_COMMENT_DEFAULT = UCS_BIT(4),[m
+[32m+[m[32m    UCS_CONFIG_PRINT_TLS             = UCS_BIT(5),[m
+ } ucs_config_print_flags_t;[m
+ [m
+ [m
+[1mdiff --git a/test/apps/test_ucp_config.c b/test/apps/test_ucp_config.c[m
+[1mindex ca7bc49..f5c9446 100644[m
+[1m--- a/test/apps/test_ucp_config.c[m
+[1m+++ b/test/apps/test_ucp_config.c[m
+[36m@@ -75,7 +75,7 @@[m [mint main(int argc, char **argv)[m
+     }[m
+ [m
+     worker_params.field_mask = 0;[m
+[31m-[m
+[32m+[m[32m    printf("worker create\n");[m
+     status = ucp_worker_create(context, &worker_params, &worker);[m
+     if (status != UCS_OK) {[m
+         fprintf(stderr, "ucp_worker_create() failed: %s\n",[m
